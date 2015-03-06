@@ -233,23 +233,60 @@ $(function() {
 
 	<div data-role="content" id="map_page" data-theme="a|d" class="ui-content" role="main">
 		<div class="content-primary">			
-			<div class="ui-field-contain ui-body ui-br" data-role="fieldcontain">			
-				<div id="accordion">
-					<h3>Select Start Address:</h3>
+			<div class="ui-field-contain ui-body ui-br" data-role="fieldcontain">
+				<div class="ui-collapsible-set ui-corner-all" data-content-theme="d" data-theme="c" data-role="collapsible-set">
+					<div class="ui-collapsible ui-collapsible-inset ui-collapsible-themed-content ui-first-child ui-collapsible-collapsed" data-role="collapsible">
+						<h3 class="ui-collapsible-heading ui-collapsible-heading-collapsed">
+							<a class="ui-collapsible-heading-toggle ui-btn ui-btn-icon-left ui-btn-up-c" href="#" data-corners="false" data-shadow="false" data-iconshadow="true" data-wrapperels="span" data-icon="plus" data-iconpos="left" data-theme="c">
+								<span class="ui-btn-inner">
+									<span class="ui-btn-text">Step 1: Select Start Address
+										<span class="ui-collapsible-heading-status"> click to expand contents</span>
+									</span>
+									<span class="ui-icon ui-icon-shadow ui-icon-plus"> </span>
+								</span>
+							</a>
+						</h3>
+						
+							<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em;">
+								<div>
+								  <input id="autocompleteStart" placeholder="Enter a start address if different from the current position" type="text" />
+								</div>						
+								<div id="start_addr_map_canvas" style="height: 300px;"></div>
+							</div>
+					</div>
+					<div class="ui-collapsible ui-collapsible-inset ui-collapsible-themed-content ui-collapsible-collapsed" data-role="collapsible">
+						<h3 class="ui-collapsible-heading ui-collapsible-heading-collapsed">
+							<a class="ui-collapsible-heading-toggle ui-btn ui-btn-icon-left ui-btn-up-c" href="#" data-corners="false" data-shadow="false" data-iconshadow="true" data-wrapperels="span" data-icon="plus" data-iconpos="left" data-theme="c">
+								<span class="ui-btn-inner">
+									<span class="ui-btn-text">Step 2: Select Destination Address
+										<span class="ui-collapsible-heading-status"> click to expand contents</span>
+									</span>
+									<span class="ui-icon ui-icon-plus ui-icon-shadow"> </span>
+								</span>
+							</a>
+						</h3>
+							<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em;">
+								<div>
+								  <input id="autocompleteDest" placeholder="Enter a destination address" type="text" />
+								</div>						
+								<div id="dest_addr_map_canvas" style="height: 300px;"></div>
+							</div>
+					</div>
+					<!--<h3>Step 1: Select Start Address</h3>
 						<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em; display: none">
 							<div>
 							  <input id="autocompleteStart" placeholder="Enter a start address if different from the current position" type="text" />
 							</div>						
 							<div id="start_addr_map_canvas" style="height: 300px;"></div>
 						</div>
-					<h3>Select Destination Address:</h3>
+					<h3>Step 2: Select Destination Address</h3>
 						<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em; display: none">
 							<div>
 							  <input id="autocompleteDest" placeholder="Enter a destination address" type="text" />
 							</div>						
 							<div id="dest_addr_map_canvas" style="height: 300px;"></div>
 						</div>
-					<h3>View and Select Route:</h3>
+					<h3>Step 3: View and Select Route</h3>
 						<div style="display: none">
 							<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em;">
 								<div id="map_canvas" style="height: 350px"></div>
@@ -257,7 +294,7 @@ $(function() {
 							<div id="results" style="display: none">
 								<div id="directions"></div>
 							</div>
-						</div>
+						</div>-->
 				</div>
 
 <!--<div class="ui-collapsible ui-collapsible-inset ui-collapsible-collapsed" data-collapsed="false" data-role="collapsible">
