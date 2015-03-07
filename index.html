@@ -9,28 +9,33 @@
 
 <script src="https://code.jquery.com/jquery-1.8.2.min.js"></script>
 <script src="https://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
-<script src="https//code.jquery.com/ui/1.11.3/jquery-ui.js"></script>
+<!--<script src="https//code.jquery.com/ui/1.11.3/jquery-ui.js"></script>-->
 
-<script src="http://maps.google.com/maps/api/js?v=3&sensor=false&language=en&libraries=places"></script>
+<script src="http://maps.google.com/maps/api/js?v=3&sensor=true&language=en&libraries=places"></script>
 <!--<script src="https://maps.googleapis.com/maps/api/js?libraries=places"></script>-->
 		
 <script>
 var startMap,
 	destMap,
+	map,
+	trackingMap,
 	currentPosition,
 	destinationPosition,
 	directionsDisplay,
 	directionsService,
+	trackingDirectionsDisplay,
+	trackingDirectionsService,
 	autocompleteStart,
 	autocompleteDest,
+	trackingMarker,
 	currentPositionsMarker,
 	destinationPositionsMarker;
 	
-function initializeMapAndCalculateRoute(lat, lon) {
+var path = [];
+
+function initializeMapAndCalculateRoute() {
 	directionsDisplay = new google.maps.DirectionsRenderer();
 	directionsService = new google.maps.DirectionsService();
-	
-	currentPosition = new google.maps.LatLng(lat, lon);
 	
 	map = new google.maps.Map(document.getElementById('map_canvas'), {
 			zoom: 15,
@@ -40,7 +45,7 @@ function initializeMapAndCalculateRoute(lat, lon) {
 		
 	directionsDisplay.setMap(map);
 	
-	var currentPositionsMarker = new google.maps.Marker({
+	var marker = new google.maps.Marker({
 		position: currentPosition,
 		map: map,
 		title: "Current Position"
@@ -88,9 +93,8 @@ function onPlaceChangedDest() {
     document.getElementById('autocompleteDest').placeholder = 'Enter another address!';
   }
 }
-
 function initializeDestMap(position) {	
-	destinationPosition = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+	destinationPosition = position;
 	
 	destMap = new google.maps.Map(document.getElementById('dest_addr_map_canvas'), {
 			zoom: 15,
@@ -109,13 +113,11 @@ function initializeDestMap(position) {
     });
 	
 	google.maps.event.addListener(autocompleteDest, 'place_changed', onPlaceChangedDest);
-
 	google.maps.event.addListener(destMap, 'click', function(e) {
 		placeMarker(e.latLng, destMap);
 		destinationPosition = e.latLng;
 	});
 }
-
 function initializeStartMap(position) {	
 	currentPosition = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
 	
@@ -134,7 +136,6 @@ function initializeStartMap(position) {
 	autocompleteStart = new google.maps.places.Autocomplete(document.getElementById('autocompleteStart'), {
 		componentRestrictions: {country: 'in'}
     });
-
 	/*var circle = new google.maps.Circle({
         center: currentPosition,
         radius: position.coords.accuracy
@@ -142,49 +143,37 @@ function initializeStartMap(position) {
 	autocompleteStart.setBounds(circle.getBounds());*/
 	
 	//places = new google.maps.places.PlacesService(startMap);
-
 	google.maps.event.addListener(autocompleteStart, 'place_changed', onPlaceChangedStart);
-
 	google.maps.event.addListener(startMap, 'click', function(e) {
 		placeMarker(e.latLng, startMap);
 		currentPosition = e.latLng;
 	});
 }
-
 function placeMarker(position, map, marker) {
 	marker.setMap(null);
 	marker = new google.maps.Marker({
           position: position,
           animation: google.maps.Animation.DROP,
-		  title: "Current Position",
+		  title: "New Position",
 		  map: map
         });
 	map.panTo(position);
 }
 
-function locationError(error) {
-	alert('Location Error');
-}
-
-function locationSuccess(position) {
-	initializeMapAndCalculateRoute(position.coords.latitude, position.coords.longitude);
-}
-
 function currentLocationSuccess(position) {
 	initializeStartMap(position);
-	initializeDestMap(position);
 }
 
 function currentLocationError(error) {
 	alert("Error in retrieving current location, please try again later!");
 }
 
+var routePolyline = [];
 function calculateRoute() {
-	var targetDestination = new google.maps.LatLng(destinationLatitude, destinationLongitude);
-	if (currentPosition != '' && targetDestination != '') {
+	if (currentPosition != '' && destinationPosition != '') {
 		var request = {
 			origin: currentPosition,
-			destination: targetDestination,
+			destination: destinationPosition,
 			travelMode: google.maps.DirectionsTravelMode["DRIVING"]
 		};
 		
@@ -192,6 +181,7 @@ function calculateRoute() {
 			if (status == google.maps.DirectionsStatus.OK) {
 				directionsDisplay.setPanel(document.getElementById("directions"));
 				directionsDisplay.setDirections(response);
+				routePolyline = response.routes[0].overview_polyline;
 				
 				$("#results").show();				
 			} else {
@@ -203,18 +193,121 @@ function calculateRoute() {
 	}
 }
 
-$(document).live("pagebeforeshow", "#map_page", function() {
-	//navigator.geolocation.getCurrentPosition(locationSuccess, locationError);
+function feedPositions() {
+	var varPos = new google.maps.LatLng(
+		currentPosition.lat() + (Math.random() / 10 * 1),
+		currentPosition.lng() + (Math.random() / 10 * 1)
+	);
+	path.push(varPos);
+	var latLngBounds = new google.maps.LatLngBounds();
+	for (var i = 0; i < path.length; i++) {
+		latLngBounds.extend(path[i]);
+	}
+	
+	if (trackingMarker == '') {
+		trackingMarker = new google.maps.Marker({
+			  map: map,
+			  position: varPos,
+			  title: "Current Position"
+		});
+	} else {
+		trackingMarker.setPosition(varPos);
+	}
+	map.fitBounds(latLngBounds);
+}
+
+function trackingSuccess(position) {		
+		var newPosition = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+		path.push(newPosition); 
+		
+		var latLngBounds = new google.maps.LatLngBounds();
+		for (var i = 0; i < path.length; i++) {
+			latLngBounds.extend(path[i]);
+		}
+		
+		if (trackingMarker == '') {
+			var image = {
+				url: 'beetleMed.png',
+				size: new google.maps.Size(64, 38),
+				origin: new google.maps.Point(0,0),
+				anchor: new google.maps.Point(0, 32)
+			};
+			trackingMarker = new google.maps.Marker({
+				  map: map,
+				  position: newPosition,
+				  title: "Current Position",
+				  icon: image
+			});
+		} else {
+			trackingMarker.setPosition(newPosition);
+		}
+		  // Creates the polyline object
+		/*var polyline = new google.maps.Polyline({
+			map: map,
+			path: path,
+			strokeColor: '#0000FF',
+			strokeOpacity: 0.7,
+			strokeWeight: 1
+		});*/
+		
+		  // Fit the bounds of the generated points
+		map.fitBounds(latLngBounds);
+}
+
+function trackingError(positionError) {
+	alert('error in watch position');
+}
+
+var interval;
+var watchId;
+	
+function tracking() {
+	if (currentPosition != '' && destinationPosition != '') {
+		path = [];
+		trackingMarker = '';
+		watchId = navigator.geolocation.watchPosition(trackingSuccess, trackingError, { maximumAge: 5000, timeout: 5000, enableHighAccuracy: true });
+		interval = window.setInterval(feedPositions, 3000);
+		$("#btnStart").hide();
+		$("#btnStop").show();
+	} else {
+		alert("No tracking to be displayed!");
+	}
+}
+
+function stopTracking() {
+	navigator.geolocation.clearWatch(watchId);
+	window.clearInterval(interval);
+	path = [];
+	trackingMarker.setMap(null);
+	watchId = '';
+}
+
+$(document).live("pagebeforeshow", "#first-page", function(event) {
 	navigator.geolocation.getCurrentPosition(currentLocationSuccess, currentLocationError, { maximumAge: 5000, timeout: 5000, enableHighAccuracy: true });
 	document.getElementById('autocompleteStart').placeholder = 'Enter a start address if different from the current position!';
 	document.getElementById('autocompleteDest').placeholder = 'Enter a destination address!';
+	/*if (event.target.id == 'second-page') {
+		tracking();
+		google.maps.event.trigger(trackingMap, "resize");
+	}*/
 });
 
-$(function() {
-   $( "#accordion" ).accordion() ({
-		collapsible: true
-	});
-});
+$(document).live('pagecreate', '#first-page', function(){	
+  $('#steps').bind('expand', function (event, ui) {
+    if (event.target.id == "routeMap") {
+		initializeMapAndCalculateRoute();
+		if (map != '')
+			google.maps.event.trigger(map, "resize");
+	} else if (event.target.id == "destinationMap") {
+		initializeDestMap(currentPosition);
+		if (destMap != '')
+			google.maps.event.trigger(destMap, "resize");
+	} else {
+		if (startMap != '')
+			google.maps.event.trigger(startMap, "resize");
+	}
+  });
+}); 
 
 </script>
 
@@ -228,142 +321,72 @@ $(function() {
 <div data-role="page" id="first-page" data-theme="d">
 
 	<div data-role="header" data-theme="d">
-		<h1><a data-ajax="false" href="/">Safe journeys!</a></h1>
+		<h1>Safe journeys!</h1>
 	</div><!-- /header -->
 
 	<div data-role="content" id="map_page" data-theme="a|d" class="ui-content" role="main">
 		<div class="content-primary">			
 			<div class="ui-field-contain ui-body ui-br" data-role="fieldcontain">
-				<div class="ui-collapsible-set ui-corner-all" data-content-theme="d" data-theme="c" data-role="collapsible-set">
-					<div class="ui-collapsible ui-collapsible-inset ui-collapsible-themed-content ui-first-child ui-collapsible-collapsed" data-role="collapsible">
+				<div class="ui-collapsible-set ui-corner-all" id="steps" data-content-theme="d" data-theme="c" data-role="collapsible-set" data-enhanced="true">
+					<div class="ui-collapsible ui-collapsible-inset ui-collapsible-themed-content ui-first-child ui-collapsible-collapsed" data-role="collapsible" data-collapsed="false">
 						<h3 class="ui-collapsible-heading ui-collapsible-heading-collapsed">
 							<a class="ui-collapsible-heading-toggle ui-btn ui-btn-icon-left ui-btn-up-c" href="#" data-corners="false" data-shadow="false" data-iconshadow="true" data-wrapperels="span" data-icon="plus" data-iconpos="left" data-theme="c">
 								<span class="ui-btn-inner">
 									<span class="ui-btn-text">Step 1: Select Start Address
 										<span class="ui-collapsible-heading-status"> click to expand contents</span>
 									</span>
-									<span class="ui-icon ui-icon-shadow ui-icon-plus"> </span>
 								</span>
 							</a>
-						</h3>
-						
-							<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em;">
-								<div>
-								  <input id="autocompleteStart" placeholder="Enter a start address if different from the current position" type="text" />
-								</div>						
-								<div id="start_addr_map_canvas" style="height: 300px;"></div>
-							</div>
+						</h3>						
+						<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em;">
+							<div>
+							  <input id="autocompleteStart" placeholder="Enter a start address if different from the current position" type="text" />
+							</div>						
+							<div id="start_addr_map_canvas" style="height: 300px;"></div>
+						</div>
 					</div>
-					<div class="ui-collapsible ui-collapsible-inset ui-collapsible-themed-content ui-collapsible-collapsed" data-role="collapsible">
+					<div id="destinationMap" class="ui-collapsible ui-collapsible-inset ui-collapsible-themed-content ui-collapsible-collapsed" data-role="collapsible">
 						<h3 class="ui-collapsible-heading ui-collapsible-heading-collapsed">
 							<a class="ui-collapsible-heading-toggle ui-btn ui-btn-icon-left ui-btn-up-c" href="#" data-corners="false" data-shadow="false" data-iconshadow="true" data-wrapperels="span" data-icon="plus" data-iconpos="left" data-theme="c">
 								<span class="ui-btn-inner">
 									<span class="ui-btn-text">Step 2: Select Destination Address
 										<span class="ui-collapsible-heading-status"> click to expand contents</span>
 									</span>
-									<span class="ui-icon ui-icon-plus ui-icon-shadow"> </span>
 								</span>
 							</a>
 						</h3>
-							<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em;">
-								<div>
-								  <input id="autocompleteDest" placeholder="Enter a destination address" type="text" />
-								</div>						
-								<div id="dest_addr_map_canvas" style="height: 300px;"></div>
-							</div>
-					</div>
-					<!--<h3>Step 1: Select Start Address</h3>
-						<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em; display: none">
-							<div>
-							  <input id="autocompleteStart" placeholder="Enter a start address if different from the current position" type="text" />
-							</div>						
-							<div id="start_addr_map_canvas" style="height: 300px;"></div>
-						</div>
-					<h3>Step 2: Select Destination Address</h3>
-						<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em; display: none">
+						<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em;">
 							<div>
 							  <input id="autocompleteDest" placeholder="Enter a destination address" type="text" />
 							</div>						
 							<div id="dest_addr_map_canvas" style="height: 300px;"></div>
 						</div>
-					<h3>Step 3: View and Select Route</h3>
-						<div style="display: none">
-							<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em;">
-								<div id="map_canvas" style="height: 350px"></div>
-							</div>
+					</div>
+					<div id="routeMap" class="ui-collapsible ui-collapsible-inset ui-collapsible-themed-content ui-collapsible-collapsed" data-role="collapsible">
+						<h3 class="ui-collapsible-heading ui-collapsible-heading-collapsed">
+							<a class="ui-collapsible-heading-toggle ui-btn ui-btn-icon-left ui-btn-up-c" href="#" data-corners="false" data-shadow="false" data-iconshadow="true" data-wrapperels="span" data-icon="plus" data-iconpos="left" data-theme="c">
+								<span class="ui-btn-inner">
+									<span class="ui-btn-text">Step 3: View Route and Start Tracking
+										<span class="ui-collapsible-heading-status"> click to expand contents</span>
+									</span>
+								</span>
+							</a>
+						</h3>
+						<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em;">
+							<div id="map_canvas" style="height: 300px"></div>
 							<div id="results" style="display: none">
 								<div id="directions"></div>
+								<div id="btnStart"><button class="ui-btn ui-corner-all ui-button-d" onclick="tracking()">Start Tracking</button></div>
+								<div id="btnStop" style="display: none"><button id="btn" class="ui-btn ui-corner-all ui-button-d" onclick="stopTracking()">Stop Tracking</button></div>
 							</div>
-						</div>-->
+						</div>
+					</div>
 				</div>
-
-<!--<div class="ui-collapsible ui-collapsible-inset ui-collapsible-collapsed" data-collapsed="false" data-role="collapsible">
-<h3 class="ui-collapsible-heading ui-collapsible-heading-collapsed">
-<a class="ui-collapsible-heading-toggle ui-btn ui-btn-icon-left ui-corner-top ui-btn-up-c" href="#" data-corners="false" data-shadow="false" data-iconshadow="true" data-wrapperels="span" data-icon="plus" data-iconpos="left" data-theme="c">
-<span class="ui-btn-inner ui-corner-top">
-<span class="ui-btn-text">
-Section 1
-<span class="ui-collapsible-heading-status"> click to expand contents</span>
-</span>
-<span class="ui-icon ui-icon-shadow ui-icon-plus"> </span>
-</span>
-</a>
-</h3>
-<div class="ui-collapsible-content ui-collapsible-content-collapsed" aria-hidden="true">
-<p>
-I'm the collapsible content in a set so this feels like an accordion. I'm visible by default because I have the
-<code>data-collapsed="false"</code>
-attribute; to collapse me, either click my header or expand another header in my set.
-</p>
-</div>
-</div>
-<div class="ui-collapsible ui-collapsible-inset ui-collapsible-collapsed" data-role="collapsible">
-<h3 class="ui-collapsible-heading ui-collapsible-heading-collapsed">
-<a class="ui-collapsible-heading-toggle ui-btn ui-btn-icon-left ui-btn-up-c" href="#" data-corners="false" data-shadow="false" data-iconshadow="true" data-wrapperels="span" data-icon="plus" data-iconpos="left" data-theme="c">
-<span class="ui-btn-inner">
-<span class="ui-btn-text">
-Section 2
-<span class="ui-collapsible-heading-status"> click to expand contents</span>
-</span>
-<span class="ui-icon ui-icon-shadow ui-icon-plus"> </span>
-</span>
-</a>
-</h3>
-<div class="ui-collapsible-content ui-collapsible-content-collapsed" aria-hidden="true">
-<p>I'm the collapsible content in a set so this feels like an accordion. I'm hidden by default because I have the "collapsed" state; you need to expand the header to see me.</p>
-</div>
-</div>-->
 			</div>			
 		</div>
 	</div><!-- /content -->
 
-	<div data-role="footer" data-theme="d">
-		<h4>Page Footer</h4>
-	</div><!-- /footer -->
 </div><!-- /page -->
 
-
-<!-- Start of second page -->
-<div data-role="page" id="bar">
-
-	<div data-role="header">
-		<h1>Bar</h1>
-	</div><!-- /header -->
-
-	<div data-role="content">	
-		<p>I'm the second in the source order so I'm hidden when the page loads. I'm just shown if a link that references my id is beeing clicked.</p>		
-		<p><a href="#foo">Back to foo</a></p>	
-		<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:2em;">
-				<div id="map_canvas" style="height: 350px"></div>
-			</div>
-			<div id="results" style="display: none">
-				<div id="directions"></div>
-			</div>
-	</div><!-- /content -->
-
-	<div data-role="footer">
-		<h4>Page Footer</h4>
-	</div><!-- /footer -->
-</div><!-- /page -->
 </body>
 </html>
