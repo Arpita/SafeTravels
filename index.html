@@ -11,7 +11,7 @@
 <script src="https://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
 <!--<script src="https//code.jquery.com/ui/1.11.3/jquery-ui.js"></script>-->
 
-<script src="http://maps.google.com/maps/api/js?v=3&sensor=true&language=en&libraries=places"></script>
+<script src="http://maps.google.com/maps/api/js?v=3&sensor=TRUE_OR_FALSE&language=en&libraries=geometry,places"></script>
 <!--<script src="https://maps.googleapis.com/maps/api/js?libraries=places"></script>-->
 		
 <script>
@@ -168,7 +168,9 @@ function currentLocationError(error) {
 	alert("Error in retrieving current location, please try again later!");
 }
 
-var routePolyline = [];
+var routePolyline;
+var poly;
+var routeArray = [];
 function calculateRoute() {
 	if (currentPosition != '' && destinationPosition != '') {
 		var request = {
@@ -181,7 +183,11 @@ function calculateRoute() {
 			if (status == google.maps.DirectionsStatus.OK) {
 				directionsDisplay.setPanel(document.getElementById("directions"));
 				directionsDisplay.setDirections(response);
-				routePolyline = response.routes[0].overview_polyline;
+				//routePolyline = response.routes[0].overview_polyline;
+				//routePolyline = new google.maps.Polyline({path:google.maps.geometry.encoding.decodePath(response.routes[0].overview_polyline)});
+				//routePolyline = new google.maps.Polyline(response.routes[0].overview_path);
+				routeArray = google.maps.geometry.encoding.decodePath(response.routes[0].overview_polyline);
+				//poly = new google.maps.Polygon({path:google.maps.geometry.encoding.decodePath(response.routes[0].overview_polyline)});
 				
 				$("#results").show();				
 			} else {
@@ -193,11 +199,24 @@ function calculateRoute() {
 	}
 }
 
+function distance(varPos, path) {
+	var shortest_distance = null;
+	for (var j = 0; j < path.length; j++) {
+        var distance = google.maps.geometry.spherical.computeDistanceBetween(varPos, path[j]);
+
+        if (shortest_distance == null || distance < shortest_distance) {
+            shortest_distance = distance;
+        }
+    }
+	return shortest_distance;
+}
+
 function feedPositions() {
 	var varPos = new google.maps.LatLng(
 		currentPosition.lat() + (Math.random() / 10 * 1),
 		currentPosition.lng() + (Math.random() / 10 * 1)
 	);
+	
 	path.push(varPos);
 	var latLngBounds = new google.maps.LatLngBounds();
 	for (var i = 0; i < path.length; i++) {
@@ -214,6 +233,12 @@ function feedPositions() {
 		trackingMarker.setPosition(varPos);
 	}
 	map.fitBounds(latLngBounds);
+	//if (google.maps.geometry.poly.containsLocation(varPos, poly)) {
+	//if (google.maps.geometry.poly.isLocationOnEdge(varPos, routePolyline)) {
+	//if (poly.Contains(varPos)) {
+	if (distance(varPos, routeArray) > 1.00000) {
+		alert('You are straying away from the route!!');
+	}
 }
 
 function trackingSuccess(position) {		
@@ -232,11 +257,19 @@ function trackingSuccess(position) {
 				origin: new google.maps.Point(0,0),
 				anchor: new google.maps.Point(0, 32)
 			};
+			 var circle = {
+				path: google.maps.SymbolPath.CIRCLE,
+				fillColor: 'blue',
+				fillOpacity: .2,
+				strokeColor: 'red',
+				strokeWeight: .5,
+				scale: 10
+			};
 			trackingMarker = new google.maps.Marker({
 				  map: map,
 				  position: newPosition,
 				  title: "Current Position",
-				  icon: image
+				  icon: circle
 			});
 		} else {
 			trackingMarker.setPosition(newPosition);
@@ -252,6 +285,9 @@ function trackingSuccess(position) {
 		
 		  // Fit the bounds of the generated points
 		map.fitBounds(latLngBounds);
+		if (distance(varPos, routeArray) > 1.00000) {
+			alert('You are straying away from the route!!');
+	}
 }
 
 function trackingError(positionError) {
