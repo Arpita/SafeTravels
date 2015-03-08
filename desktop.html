@@ -236,7 +236,7 @@ function feedPositions() {
 	//if (google.maps.geometry.poly.containsLocation(varPos, poly)) {
 	//if (google.maps.geometry.poly.isLocationOnEdge(varPos, routePolyline)) {
 	//if (poly.Contains(varPos)) {
-	if (distance(varPos, routeArray) > 1.00000) {
+	if (distance(varPos, routeArray) > 200.00000) {
 		alert('You are straying away from the route!!');
 	}
 }
@@ -285,7 +285,7 @@ function trackingSuccess(position) {
 		
 		  // Fit the bounds of the generated points
 		map.fitBounds(latLngBounds);
-		if (distance(varPos, routeArray) > 1.00000) {
+		if (distance(varPos, routeArray) > 200.00000) {
 			alert('You are straying away from the route!!');
 	}
 }
