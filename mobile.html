@@ -285,7 +285,7 @@ function trackingSuccess(position) {
 		
 		  // Fit the bounds of the generated points
 		map.fitBounds(latLngBounds);
-		if (distance(varPos, routeArray) > 1.00000) {
+		if (distance(newPosition, routeArray) > 1.00000) {
 			alert('You are straying away from the route!!');
 	}
 }
